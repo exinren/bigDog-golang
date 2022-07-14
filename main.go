@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bigDog-golang/common"
 	"bigDog-golang/global"
 	"bigDog-golang/pkg/logger"
 	"bigDog-golang/pkg/setting"
@@ -28,6 +29,8 @@ func init()  {
 	}
 	// 初始化redis
 	tRedis.InitRedis(global.RedisSetting)
+
+	initPolygon()
 }
 
 // @title bigDogCoin项目
@@ -69,6 +72,10 @@ func setupSetting() error {
 	if nil != err {
 		return err
 	}
+	err = s.ReadSection("Polygon", &global.PolygonSetting)
+	if nil != err {
+		return err
+	}
 	global.ServerSetting.ReadTimeout *= time.Second
 	global.ServerSetting.WriteTimeout *= time.Second
 	return nil
@@ -81,5 +88,21 @@ func setupLogger () error {
 		MaxAge: 10,
 		LocalTime: true,
 	}, "", log.LstdFlags).WithCaller(2)
+	return nil
+}
+
+// 初始化代币
+func initPolygon() error {
+	var err error
+	global.PolygonClients, err = common.InitPolygonClient(global.PolygonSetting)
+	if nil != err {
+		global.Logger.Error("初始化扑该仔错误")
+		return err
+	}
+	global.ERCContractClients, err = common.InitERCContractClient(global.PolygonSetting.ContractABI, global.PolygonSetting.ContractAddress, global.PolygonClients.Client)
+	if nil != err {
+		global.Logger.Error("初始化大狗币合约错误")
+		return err
+	}
 	return nil
 }

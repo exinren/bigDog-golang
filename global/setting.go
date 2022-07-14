@@ -1,6 +1,7 @@
 package global
 
 import (
+	"bigDog-golang/common"
 	"bigDog-golang/pkg/logger"
 	"bigDog-golang/pkg/setting"
 )
@@ -11,7 +12,9 @@ var (
 	AppSetting			*setting.AppSettingS
 	Logger				*logger.Logger
 	RedisSetting		*setting.RedisSettingS
-	JWTSetting			*setting.JWTSettingS
+	PolygonSetting		*setting.PolygonSettingS
+	PolygonClients		*common.PolygonClient
+	ERCContractClients	*common.ERCContractClient
 )
 
 

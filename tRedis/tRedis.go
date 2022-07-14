@@ -15,7 +15,7 @@ func InitRedis(instance *setting.RedisSettingS){
 		IdleTimeout: 3000,
 		Wait: true,
 		Dial: func() (redis.Conn, error) {
-			return redis.Dial("tcp", fmt.Sprintf("%s:%s",instance.Address,instance.Port),
+			return redis.Dial("tcp", fmt.Sprintf("%s:%v",instance.Address,instance.Port),
 				redis.DialPassword(instance.Password),redis.DialDatabase(instance.Database))
 		},
 	}

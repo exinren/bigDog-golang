@@ -12,6 +12,7 @@ func NewRouter() *gin.Engine {
 	// 处理panic
 	r.Use(gin.Recovery())
 	r.GET("/captcha", ctrl.Captcha)
+	r.POST("/check", ctrl.CheckCaptchas)
 	//r.GET("/captcha/verity/:value", func(c *gin.Context) {
 	//	fmt.Println(123)
 	//})
