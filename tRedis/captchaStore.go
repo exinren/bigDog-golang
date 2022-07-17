@@ -40,5 +40,3 @@ func (store *captchaStore) Verify(id, answer string, clear bool) bool{
 	}
 	return flag
 }
-
-

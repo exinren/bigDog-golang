@@ -62,14 +62,21 @@ func GetPWD() string {
 }
 
 func CalcuFaucet(total *big.Int) *big.Int {
-	max := total.Int64()
+	max := total.Int64() / 100
 	res := new(big.Int)
-	if total.Int64() > MaxCount {
+	if max > MaxCount {
 		max = MaxCount
 	}
 	result,_ := rand.Int(rand.Reader, big.NewInt(max))
-	if (result.Int64() < MinCount) {
+	if (result.Int64() < MinCount && max > MinCount) {
 		return res.Add(result, big.NewInt(MinCount))
+	} else {
+		mini := max % 10
+		if (result.Int64() < mini) {
+			return res.Add(result, big.NewInt(mini))
+		}
+		return result
+
 	}
 	return result
 }

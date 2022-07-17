@@ -5,13 +5,17 @@ import (
 	"bigDog-golang/global"
 	"bigDog-golang/pkg/logger"
 	"bigDog-golang/pkg/setting"
+	"bigDog-golang/pkg/timer"
 	routers "bigDog-golang/router"
 	"bigDog-golang/tRedis"
-	"fmt"
+	"context"
 	"github.com/gin-gonic/gin"
 	"gopkg.in/natefinch/lumberjack.v2"
 	"log"
 	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
 	"time"
 )
 
@@ -29,8 +33,10 @@ func init()  {
 	}
 	// 初始化redis
 	tRedis.InitRedis(global.RedisSetting)
-
+	// 初始化扑该仔链
 	initPolygon()
+	// 初始化定时任务
+	go timer.InitCron()
 }
 
 // @title bigDogCoin项目
@@ -39,6 +45,7 @@ func init()  {
 func main()  {
 	gin.SetMode(global.ServerSetting.RunMode)
 	route := routers.NewRouter()
+	
 	serve := &http.Server{
 		Addr: global.ServerSetting.HttpPort,
 		Handler: route,
@@ -46,10 +53,29 @@ func main()  {
 		WriteTimeout: global.ServerSetting.WriteTimeout,
 		MaxHeaderBytes: 1 << 20,
 	}
-	err := serve.ListenAndServe()
-	if nil != err {
-		fmt.Println("ListenAndServe err: ", err)
+	// 优雅的关机
+	//通过子程序启动服务
+	go func() {
+		log.Printf("Actual pid is %d", syscall.Getpid())
+		if err := serve.ListenAndServe(); err != nil {
+			//global.Logger.Info("Listen： %s\n", err)
+			log.Printf("Listen： %s\n", err)
+		}
+
+	}()
+	quit := make(chan os.Signal)
+	signal.Notify(quit, os.Interrupt)
+	// 阻塞，当进程中断的时候唤醒，如： ctrl + c
+	<- quit
+	global.Logger.Info("Shutdown Server....")
+	// 延迟十秒后重启
+	ctx, cancel := context.WithTimeout(context.Background(), 10 * time.Second)
+	defer cancel()
+	// 实现优雅的重启
+	if err := serve.Shutdown(ctx); nil != err {
+		log.Fatal("Server Shutdown：", err)
 	}
+	global.Logger.Info("Server exit")
 }
 
 // 读取配置文件

@@ -2,8 +2,10 @@ package ctrl
 
 import (
 	captchas "bigDog-golang/common/captcha"
+	"bigDog-golang/constant"
 	"bigDog-golang/model"
 	"bigDog-golang/pkg/app"
+	"bigDog-golang/pkg/errcode"
 	"bigDog-golang/tRedis"
 	"bigDog-golang/utils"
 	"fmt"
@@ -41,38 +43,59 @@ func CheckCaptchas(c *gin.Context)  {
 	address := c.PostForm("address")
 	responese := app.NewResponse(c)
 	leftInt, err := strconv.Atoi(left)
-
 	if nil != err {
-		res := gin.H{"code": 500,"info": "传输参数错误"}
+		res := gin.H{"code": 401,"msg": "传输参数错误"}
 		responese.ToResponse(res)
 		return
 	}
+	// 验证
 	redis := tRedis.GetInstanceByCaptchaStore()
 	value := redis.Get(fmt.Sprintf("captcha:%s", id),true)
 	if value == "" {
-		res := gin.H{"code": 500,"info": "id不存在"}
+		res := gin.H{"code": 401,"msg": "id不存在"}
 		responese.ToResponse(res)
 		return
 	}
+	// 转化数据
 	valueInt, _ := strconv.Atoi(value)
 	if (valueInt - leftInt) >= 10 || (leftInt - valueInt) >= 10{
-		res := gin.H{"code": 504,"info": "验证失败"}
-		responese.ToResponse(res)
+		responese.ToErrorResponse(errcode.ErrorVerityCaptchaFail)
 		return
 	}
 	if address == "" {
-		res := gin.H{"code": 500,"info": "address 不能为空"}
+		res := gin.H{"code": 401,"msg": "地址不能为空"}
 		responese.ToResponse(res)
 		return
 	}
-	fmt.Println(address)
+	// 获取ip和address缓存并查询
+	ip := c.ClientIP()
+	ipKey := fmt.Sprintf("%s%s",constant.IP, ip)
+	ipValue := redis.Get(ipKey, false)
+	if ipValue == ip && ip != "" {
+		res := gin.H{"code": 401,"msg": "领取失败，已经领取过了！"}
+		responese.ToResponse(res)
+		return
+	}
+	// 地址储存redis的key
+	key := fmt.Sprintf("%s%s",constant.ADDRESS, address)
+	keyValue := redis.Get(key, false)
+	if keyValue == address {
+		res := gin.H{"code": 401,"msg": "领取失败，已经领取过了！"}
+		responese.ToResponse(res)
+		return
+	}
 	err = model.SendCoin(address)
 	if nil != err {
-		res := gin.H{"code": 500,"info": "领取失败，请稍后再试！"}
+		res := gin.H{"code": 500,"msg": "领取失败，请稍后再试！"}
 		responese.ToResponse(res)
 		return
 	}
-	res := gin.H{"code": 200, "info": "领取成功"}
+	// 存储ip和address
+	tRedis.SetSingle(key, address, constant.ONEDAY)
+	tRedis.SetSingle(ipKey, ip, constant.ONEDAY)
+	res := gin.H{"code": 200, "msg": "领取成功"}
+	fmt.Println("ip:",ip)
+	//fmt.Println("key:",key)
 	responese.ToResponse(res)
 	return
 }

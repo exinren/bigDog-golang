@@ -1,6 +1,7 @@
 package tRedis
 
 import (
+	"bigDog-golang/global"
 	"bigDog-golang/pkg/setting"
 	"fmt"
 	"github.com/gomodule/redigo/redis"
@@ -64,6 +65,25 @@ func DelKey(key string) bool{
 	result,err := conn.Do("DEL",key)
 	r := result.(int64)
 	if nil != err || 0 == r{
+		return false
+	}
+	return true
+}
+
+// ExpMatchDel 批量删除
+// key string 模糊匹配的字符串
+// bool
+func ExpMatchDel(key string) bool {
+	conn := redisPool.Get()
+	defer conn.Close()
+	val, err := redis.Strings(conn.Do("KEYS", "*"+key+"*"))
+	conn.Send("MULTI")
+	for i, _ := range val {
+		conn.Send("DEL", val[i])
+	}
+	_, err = redis.Values(conn.Do("EXEC"))
+	if err != nil {
+		global.Logger.Error("error(%v)", err)
 		return false
 	}
 	return true

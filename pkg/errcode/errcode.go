@@ -59,6 +59,10 @@ func (e *Error) StatusCode() int {
 		return http.StatusOK	// 200
 	case ServerError.Code():
 		return http.StatusInternalServerError	// 500
+	case ErrorGetCaptchaFail.Code():
+		fallthrough
+	case ErrorVerityCaptchaFail.Code():
+		return http.StatusBadRequest
 	case InvalidParams.Code():
 		return http.StatusBadGateway	// 502
 	case UnauthorizedAuthNotExist.Code():
